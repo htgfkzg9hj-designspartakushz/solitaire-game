@@ -1,0 +1,25 @@
+
+{
+  "id": "./",
+  "name": "10, 20, 30 Solitaire",
+  "short_name": "Solitaire",
+  "description": "A custom 10, 20, 30 Solitaire card game.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#174b35",
+  "theme_color": "#174b35",
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

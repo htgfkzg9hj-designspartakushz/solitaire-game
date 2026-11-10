@@ -1,0 +1,1034 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#174b35">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Solitaire">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10, 20, 30 Solitaire</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 20px;
+  background: #102b49;
+  color: white;
+  font-family: Arial, sans-serif;
+}
+
+.game {
+  max-width: 1000px;
+  margin: auto;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 26px;
+}
+
+button {
+  border: none;
+  border-radius: 9px;
+  padding: 12px 18px;
+  font-weight: bold;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+/* Buttons */
+
+.new-game,
+.discard {
+  background: #dbeafe;
+  color: #17304b;
+}
+
+.flip {
+  background: #f59e0b;
+  color: #172235;
+}
+
+/* Statistics */
+
+.stats {
+  display: flex;
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.stat {
+  flex: 1;
+  background: #173957;
+  border: 1px solid #31516e;
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+}
+
+.stat span {
+  display: block;
+  color: #c4d4e5;
+  font-size: 13px;
+}
+
+.stat strong {
+  display: block;
+  font-size: 22px;
+  margin-top: 5px;
+}
+
+/* Playing table */
+
+.table {
+  background: radial-gradient(#176348, #0b3b32);
+  border: 3px solid #36765c;
+  border-radius: 15px;
+  padding: 15px;
+  overflow: hidden;
+}
+
+.card-area {
+  width: 100%;
+  margin-top: 10px;
+}
+
+/* Overlapping cards */
+
+.card-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+
+  min-height:
+    calc(var(--card-width) * 1.42 + 10px);
+
+  margin-bottom: 8px;
+}
+
+/* All cards have the same background */
+
+.card {
+  flex: 0 0 auto;
+
+  width: var(--card-width);
+
+  height:
+    calc(var(--card-width) * 1.42);
+
+  margin-left:
+    calc(var(--card-reveal) - var(--card-width));
+
+  background: #fffaf0;
+  color: #172235;
+
+  border: 1px solid #c9c1b2;
+  border-radius: 7px;
+
+  padding: 4px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+
+  font-size: clamp(10px, 1.5vw, 14px);
+  font-weight: bold;
+  line-height: 1.15;
+
+  cursor: pointer;
+
+  box-shadow: 1px 2px 4px #0005;
+
+  position: relative;
+  overflow: hidden;
+}
+
+.card:first-child {
+  margin-left: 0;
+}
+
+/* Suit colors */
+
+.card.red {
+  color: #c52d3a;
+}
+
+/* Rank and suit upper-left */
+
+.card .rank {
+  display: block;
+  white-space: nowrap;
+}
+
+.card .suit {
+  display: block;
+  font-size: 1.1em;
+  margin-top: 2px;
+}
+
+/* Selected cards */
+
+.card.selected {
+  outline: 3px solid #fbbf24;
+  outline-offset: -2px;
+  transform: translateY(-6px);
+  z-index: 3;
+}
+
+/* Messages */
+
+.message {
+  margin: 18px 0;
+  padding: 15px;
+  border-radius: 10px;
+  background: #173957;
+  min-height: 48px;
+  font-weight: bold;
+}
+
+/* Controls */
+
+.controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.controls button {
+  flex: 1;
+}
+
+/* Instructions */
+
+.instructions {
+  margin-top: 20px;
+  color: #c4d4e5;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+@media(max-width: 500px) {
+  body {
+    padding: 12px;
+  }
+
+  h1 {
+    font-size: 21px;
+  }
+
+  .stats {
+    gap: 5px;
+  }
+
+  .stat {
+    padding: 9px 4px;
+  }
+
+  .stat strong {
+    font-size: 18px;
+  }
+
+  .card {
+    padding: 3px;
+    border-radius: 5px;
+  }
+
+  .controls button {
+    padding: 11px 8px;
+    font-size: 13px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="game">
+
+<header>
+  <h1>10, 20, 30 Solitaire</h1>
+
+  <button class="new-game" id="newGame">
+    ↻ New Game
+  </button>
+</header>
+
+<div class="stats">
+
+  <div class="stat">
+    <span>Flips</span>
+    <strong id="flips">0/52</strong>
+  </div>
+
+  <div class="stat">
+    <span>Cards Remaining</span>
+    <strong id="remaining">52</strong>
+  </div>
+
+  <div class="stat">
+    <span>Selected Total</span>
+    <strong id="total">0</strong>
+  </div>
+
+</div>
+
+<div class="table">
+
+  <strong>Your Cards — Played Order</strong>
+
+  <div class="card-area" id="cardRow">
+    Flip your first card to begin.
+  </div>
+
+</div>
+
+<div class="message" id="message">
+  Welcome! Flip a card to start playing.
+</div>
+
+<div class="controls">
+
+  <button class="flip" id="flip">
+    Flip Next Card
+  </button>
+
+  <button class="discard" id="discard" disabled>
+    Discard Selected
+  </button>
+
+</div>
+
+<div class="instructions">
+
+  <strong>How to play</strong><br>
+
+  1. Flip one card at a time.<br>
+  2. Cards are added to the playing area.<br>
+  3. Only four specific combinations can be selected.<br>
+  4. Selected cards must total 10, 20, or 30.<br>
+  5. Press Discard Selected to remove the cards.<br>
+  6. Continue until all 52 cards are flipped.<br><br>
+
+  <strong>Allowed combinations</strong><br>
+
+  1. First + Second + Third<br>
+  2. First + Second + Last<br>
+  3. First + Last + Second-to-Last<br>
+  4. Last Three Cards<br><br>
+
+  <strong>Card values</strong><br>
+
+  Ace = 1.<br>
+  Cards 2–9 = face value.<br>
+  10, Jack, Queen, King = 10.<br><br>
+
+  <strong>Winning</strong><br>
+
+  You win if no cards remain, or if exactly one card
+  remains and its value is 10.
+
+</div>
+
+</div>
+
+<script>
+
+/* =====================================
+   GAME SETUP
+===================================== */
+
+const suits = [
+  { symbol: "♠", color: "black" },
+  { symbol: "♥", color: "red" },
+  { symbol: "♦", color: "red" },
+  { symbol: "♣", color: "black" }
+];
+
+const ranks = [
+  "A","2","3","4","5","6","7",
+  "8","9","10","J","Q","K"
+];
+
+let deck = [];
+let line = [];
+let selected = new Set();
+
+let flips = 0;
+let gameOver = false;
+
+const $ = id => document.getElementById(id);
+
+
+/* =====================================
+   CARD VALUES
+===================================== */
+
+function cardValue(rank) {
+
+  if (rank === "A") return 1;
+
+  if (["10","J","Q","K"].includes(rank)) {
+    return 10;
+  }
+
+  return Number(rank);
+}
+
+
+/* =====================================
+   SHUFFLE
+===================================== */
+
+function shuffle(cards) {
+
+  for (let i = cards.length - 1; i > 0; i--) {
+
+    const j = Math.floor(Math.random() * (i + 1));
+
+    [cards[i], cards[j]] =
+      [cards[j], cards[i]];
+
+  }
+
+  return cards;
+}
+
+
+/* =====================================
+   CREATE DECK
+===================================== */
+
+function createDeck() {
+
+  const cards = [];
+
+  suits.forEach(suit => {
+
+    ranks.forEach(rank => {
+
+      cards.push({
+
+        id: suit.symbol + rank,
+
+        rank: rank,
+
+        suit: suit.symbol,
+
+        color: suit.color,
+
+        value: cardValue(rank)
+
+      });
+
+    });
+
+  });
+
+  return shuffle(cards);
+}
+
+
+/* =====================================
+   ALLOWED POSITIONS
+===================================== */
+
+function allowedCombinations() {
+
+  const n = line.length;
+
+  if (n < 3) return [];
+
+  const combinations = [
+
+    // First, Second, Third
+    [0, 1, 2],
+
+    // First, Second, Last
+    [0, 1, n - 1],
+
+    // First, Last, Second-to-Last
+    [0, n - 2, n - 1],
+
+    // Last three cards
+    [n - 3, n - 2, n - 1]
+
+  ];
+
+  const seen = new Set();
+
+  return combinations
+
+    .map(group =>
+      [...new Set(group)].sort((a, b) => a - b)
+    )
+
+    .filter(group => group.length === 3)
+
+    .filter(group => {
+
+      const key = group.join(",");
+
+      if (seen.has(key)) return false;
+
+      seen.add(key);
+
+      return true;
+
+    });
+
+}
+
+
+/* =====================================
+   SELECTION HELPERS
+===================================== */
+
+function selectedIndexes() {
+
+  return [...selected]
+
+    .map(id =>
+      line.findIndex(card => card.id === id)
+    )
+
+    .sort((a, b) => a - b);
+
+}
+
+
+function selectedTotal() {
+
+  return line
+
+    .filter(card => selected.has(card.id))
+
+    .reduce((sum, card) =>
+      sum + card.value, 0
+    );
+
+}
+
+
+function matchingCombination() {
+
+  const indexes = selectedIndexes();
+
+  return allowedCombinations().some(group =>
+    group.join(",") === indexes.join(",")
+  );
+
+}
+
+
+function validSelection() {
+
+  return (
+
+    selected.size === 3 &&
+
+    matchingCombination() &&
+
+    [10, 20, 30].includes(selectedTotal())
+
+  );
+
+}
+
+
+/* =====================================
+   CHECK PARTIAL SELECTION
+===================================== */
+
+function partialAllowed(index) {
+
+  const current = [
+
+    ...selectedIndexes(),
+
+    index
+
+  ].sort((a, b) => a - b);
+
+  return allowedCombinations().some(group =>
+
+    current.every(position =>
+      group.includes(position)
+    )
+
+  );
+
+}
+
+
+/* =====================================
+   CHECK FOR AVAILABLE COMBINATION
+===================================== */
+
+function hasValidTrio() {
+
+  return allowedCombinations().some(group => {
+
+    const sum = group.reduce(
+
+      (total, index) =>
+        total + line[index].value,
+
+      0
+
+    );
+
+    return [10, 20, 30].includes(sum);
+
+  });
+
+}
+
+
+/* =====================================
+   DISPLAY GAME
+===================================== */
+
+function render() {
+
+  $("flips").textContent = flips + "/52";
+
+  $("remaining").textContent = deck.length;
+
+  $("total").textContent = selectedTotal();
+
+  const area = $("cardRow");
+
+  area.innerHTML = "";
+
+  if (line.length === 0) {
+
+    area.textContent = "No cards in the row yet.";
+
+  }
+
+  // Automatically resize cards.
+
+  const width = area.clientWidth || 300;
+
+  const cardWidth = Math.min(
+
+    68,
+
+    Math.max(42, width * 0.12)
+
+  );
+
+  const minimumReveal = 23;
+
+  // Determine how many cards fit in a row.
+
+  const cardsPerRow = Math.max(
+
+    1,
+
+    Math.min(
+
+      13,
+
+      Math.floor(
+        (width - cardWidth) / minimumReveal
+      ) + 1
+
+    )
+
+  );
+
+  // Divide cards into overlapping rows.
+
+  for (
+    let start = 0;
+    start < line.length;
+    start += cardsPerRow
+  ) {
+
+    const group = line.slice(
+      start,
+      start + cardsPerRow
+    );
+
+    const row = document.createElement("div");
+
+    row.className = "card-row";
+
+    const reveal = group.length > 1
+
+      ? Math.max(
+
+          minimumReveal,
+
+          (width - cardWidth) /
+          (group.length - 1)
+
+        )
+
+      : cardWidth;
+
+    row.style.setProperty(
+      "--card-width",
+      cardWidth + "px"
+    );
+
+    row.style.setProperty(
+      "--card-reveal",
+      Math.min(cardWidth, reveal) + "px"
+    );
+
+    group.forEach((card, j) => {
+
+      const index = start + j;
+
+      const button = document.createElement("button");
+
+      button.type = "button";
+
+      button.className =
+
+        "card " +
+
+        card.color +
+
+        (selected.has(card.id) ? " selected" : "");
+
+      // Only cards belonging to an allowed
+      // position combination are clickable.
+
+      const eligible = allowedCombinations().some(
+        combination => combination.includes(index)
+      );
+
+      button.disabled = gameOver || !eligible;
+
+      button.title =
+        "Played position " + (index + 1);
+
+      const rank = document.createElement("span");
+
+      rank.className = "rank";
+
+      rank.textContent = card.rank;
+
+      const suit = document.createElement("span");
+
+      suit.className = "suit";
+
+      suit.textContent = card.suit;
+
+      button.append(rank, suit);
+
+      button.addEventListener("click", () => {
+
+        toggleCard(card.id);
+
+      });
+
+      row.appendChild(button);
+
+    });
+
+    area.appendChild(row);
+
+  }
+
+  $("flip").disabled =
+    gameOver || deck.length === 0;
+
+  $("flip").textContent =
+    deck.length === 0
+      ? "All Cards Flipped"
+      : "Flip Next Card";
+
+  $("discard").disabled =
+    gameOver || !validSelection();
+
+}
+
+
+/* =====================================
+   SELECT CARDS
+===================================== */
+
+function toggleCard(id) {
+
+  if (gameOver) return;
+
+  if (selected.has(id)) {
+
+    selected.delete(id);
+
+  } else {
+
+    const index = line.findIndex(
+      card => card.id === id
+    );
+
+    if (selected.size >= 3) {
+
+      $("message").textContent =
+        "Select only three cards.";
+
+      return;
+
+    }
+
+    if (!partialAllowed(index)) {
+
+      $("message").textContent =
+        "That card does not fit an allowed combination.";
+
+      return;
+
+    }
+
+    selected.add(id);
+
+  }
+
+  if (selected.size < 3) {
+
+    $("message").textContent =
+      "Select " + (3 - selected.size) +
+      " more card(s).";
+
+  }
+
+  else if (validSelection()) {
+
+    $("message").textContent =
+      "Valid combination! Total: " +
+      selectedTotal() +
+      ". Press Discard Selected.";
+
+  }
+
+  else {
+
+    $("message").textContent =
+      "Selected total: " +
+      selectedTotal() +
+      ". It must equal 10, 20, or 30.";
+
+  }
+
+  render();
+
+}
+
+
+/* =====================================
+   FLIP NEXT CARD
+===================================== */
+
+function flipCard() {
+
+  if (gameOver || deck.length === 0) return;
+
+  const card = deck.pop();
+
+  line.push(card);
+
+  flips++;
+
+  selected.clear();
+
+  $("message").textContent =
+
+    "You flipped " +
+    card.rank +
+    card.suit +
+    ". Choose three cards in an allowed position.";
+
+  render();
+
+  checkGameEnd();
+
+}
+
+
+/* =====================================
+   DISCARD SELECTED CARDS
+===================================== */
+
+function discardCards() {
+
+  if (!validSelection() || gameOver) return;
+
+  const total = selectedTotal();
+
+  line = line.filter(card =>
+    !selected.has(card.id)
+  );
+
+  selected.clear();
+
+  $("message").textContent =
+
+    "Discarded three cards totaling " +
+    total + ".";
+
+  render();
+
+  checkGameEnd();
+
+}
+
+
+/* =====================================
+   CHECK GAME END
+===================================== */
+
+function checkGameEnd() {
+
+  if (deck.length !== 0) return;
+
+  if (hasValidTrio()) return;
+
+  gameOver = true;
+
+  selected.clear();
+
+  if (
+
+    line.length === 0 ||
+
+    (
+      line.length === 1 &&
+      line[0].value === 10
+    )
+
+  ) {
+
+    $("message").textContent =
+      "🎉 YOU WIN! Congratulations!";
+
+  }
+
+  else {
+
+    $("message").textContent =
+
+      "GAME OVER — YOU LOSE! " +
+      line.length +
+      " card(s) remain.";
+
+  }
+
+  render();
+
+}
+
+
+/* =====================================
+   NEW GAME
+===================================== */
+
+function newGame() {
+
+  deck = createDeck();
+
+  line = [];
+
+  selected.clear();
+
+  flips = 0;
+
+  gameOver = false;
+
+  $("message").textContent =
+    "New shuffled deck ready. Flip your first card!";
+
+  render();
+
+}
+
+
+/* =====================================
+   BUTTON EVENTS
+===================================== */
+
+$("newGame").addEventListener(
+  "click",
+  newGame
+);
+
+$("flip").addEventListener(
+  "click",
+  flipCard
+);
+
+$("discard").addEventListener(
+  "click",
+  discardCards
+);
+
+
+/* =====================================
+   AUTOMATIC SCREEN RESIZING
+===================================== */
+
+if (typeof ResizeObserver !== "undefined") {
+
+  const observer = new ResizeObserver(() => {
+
+    render();
+
+  });
+
+  observer.observe($("cardRow"));
+
+} else {
+
+  window.addEventListener("resize", render);
+
+}
+
+
+/* =====================================
+   START GAME
+===================================== */
+
+newGame();
+
+</script>
+
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./service-worker.js")
+      .catch(error => {
+        console.error("Service worker registration failed:", error);
+      });
+  });
+}
+</script>
+</body>
+
+
+</html>
